@@ -1,5 +1,5 @@
 # echo2
-This project shows how Scala Macro as a compiler plugin can be used for mutating soure AST tree and generating more compile-time artifacts.
+This project demonstrates how Scala Macro as a compiler plugin can be used for mutating soure AST tree and generating more compile-time artifacts.
 ```scala
 @Type
 trait Echo {
@@ -15,12 +15,12 @@ class EchoImp extends Echo {
 During compilation, the macro will generate a Scala module such as:
 ```scala
 object Echo extends Echo {
-  def echo(msg: String) = <invoke-EchoImpl's-echo()>
+  def echo(msg: String) = // invoke EchoImpl's echo()
 }
 ```
 Now, invoking **Echo.echo("How are you!")** from a test will return *Hello! How are you!*.
 
-Also, calling **Echo.toAST()** will return the whole AST tree of the **Echo** trait. You can use the AST to derive artifacts for further integration for instance database schema generation or interoperation with other programming languages.
+Also, calling **Echo.dumpAst()** will return the whole AST tree of the **Echo** trait. You can use the AST to derive artifacts for further integration for instance database schema generation or interoperation with other programming languages.
 ```
 ClassDef(
   Modifiers(ABSTRACT | INTERFACE | DEFAULTPARAM/TRAIT), 
