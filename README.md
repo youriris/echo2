@@ -1,12 +1,12 @@
 # echo2
-This project shows how Scala Macro as a compiler plugin can be used to generate compile-time artifacts.
+This project shows how Scala Macro as a compiler plugin can be used for mutating soure AST tree and generating more compile-time artifacts.
 ```
 @Type
 trait Echo {
   def echo(msg: String): String
 }
 ```
-When you have this Scala trait(Java Interface), the @Type Scala Macro generates a Scala Module(Java Singleton) class, that binds an implementation class to the trait. If you provide an impl class such as:
+When you have this Scala trait(Java Interface), the **@Type** Scala Macro generates a Scala Module(Java Singleton) class, that binds an implementation class to the trait. If you provide an impl class such as:
 ```
 class EchoImp extends Echo {
   def echo(msg: String) = "Hello! " + msg
@@ -18,9 +18,9 @@ object Echo extends Echo {
   def echo(msg: String) = <invoke-EchoImpl's-echo()>
 }
 ```
-So, invoking Echo.echo("How are you!") from a test will return "Hello! How are you!".
+Now, invoking **Echo.echo("How are you!")** from a test will return *Hello! How are you!*.
 
-Also, calling Echo.toAST() will return the whole AST tree of the Echo trait. You can use the AST to derive artifacts for further integration for instance database schema generation or interoperation with other programming languages.
+Also, calling **Echo.toAST()** will return the whole AST tree of the **Echo** trait. You can use the AST to derive artifacts for further integration for instance database schema generation or interoperation with other programming languages.
 ```
 ClassDef(
   Modifiers(ABSTRACT | INTERFACE | DEFAULTPARAM/TRAIT), 
