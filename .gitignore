@@ -1,0 +1,12 @@
+.cache
+.classpath
+.derived
+.metadata
+.settings
+.project
+.idea
+.cache-main
+.cache-tests
+
+target
+bin
