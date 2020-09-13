@@ -11,6 +11,7 @@ When you have this Scala trait(Java Interface), the @Type Scala Macro generates 
 class EchoImp extends Echo {
   def echo(msg: String) = "Hello! " + msg
 }
+```
 During compilation, the macro will generate a Scala module such as:
 ```
 object Echo extends Echo {
