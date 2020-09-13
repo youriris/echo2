@@ -11,7 +11,8 @@ class Type extends StaticAnnotation {
 
 object Type {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._    
+    import c.universe._
+    
     val inputs = annottees.map(_.tree).toList
     // c.warning(c.enclosingPosition, "tree " + show(c.macroApplication))
 
@@ -47,7 +48,7 @@ object Type {
               object $termName {
                 ..$newTemplate
                 
-                def ast = ${showRaw(interface)}
+                def dumpAst = ${showRaw(interface)}
               }
             """
           case _ => null
@@ -62,7 +63,6 @@ object Type {
       
       $module
     """
-    c.warning(c.enclosingPosition, String.valueOf(block))
       
     c.Expr[Any](block)
   }

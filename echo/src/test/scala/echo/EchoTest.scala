@@ -8,7 +8,9 @@ class EchoTest extends AnyFlatSpec {
      Echo.echo("How are you!") shouldBe "Hi! How are you!"
 
      Echo.echoTo("How are you!")("Tom") shouldBe "Hi, Tom! How are you!"
-     
-     Echo.ast should startWith("""ClassDef(Modifiers(ABSTRACT | INTERFACE | DEFAULTPARAM/TRAIT), TypeName("Echo")""")
+  }
+
+  "dumpAst()" should "dump AST tree for the type" in {
+     Echo.dumpAst should startWith("""ClassDef(Modifiers(ABSTRACT | INTERFACE | DEFAULTPARAM/TRAIT), TypeName("Echo")""")
   }
 }
