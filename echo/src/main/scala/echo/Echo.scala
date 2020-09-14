@@ -2,7 +2,7 @@ package echo
 
 @Type
 trait Echo {
-  def echo(msg: String): String
+  @static def echo(msg: String): String
 
-  def echoTo(msg: String)(target: String): String
+  @static def echoTo(msg: String)(target: String): String
 }
