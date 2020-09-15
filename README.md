@@ -55,7 +55,7 @@ Just in case you are confused, mutation of AST or generation of a new Scala modu
 
 This project is a pre-cursor to a Compiler Plugin for Kotlin, as Kotlin does not seem to have as good development support from the community, when it comes to compiler plugin.
 
-Given the trait, check what you can do with the following test:
+Given the full Echo definition, check what you can do with the following test:
 ```scala
 @Type
 trait Echo {
