@@ -55,8 +55,26 @@ Just in case you are confused, mutation of AST or generation of a new Scala modu
 
 This project is a pre-cursor to a Compiler Plugin for Kotlin, as Kotlin does not seem to have as good development support from the community, when it comes to compiler plugin.
 
-Check what you can do with the following test.
+Given the trait, check what you can do with the following test:
 ```scala
+@Type
+trait Echo {
+  // immutable member value delegation -> EchoImpl.greetings 
+  @field def greetings: String
+
+  // immutable member value delegation -> EchoImpl.times
+  @field def times: Integer
+  
+  // instance call delegation -> EchoImpl.echo(msg)
+  def echo(msg: String): String 
+
+  // multiple parameter group support -> EchoImpl.echoTo(msg)(target)
+  def echoTo(msg: String)(target: String): String
+
+  // static call delegation -> EchoStatic.echoStatic(msg)
+  @static def echoStatic(msg: String): String
+}
+
 class EchoTest extends AnyFlatSpec {
   "Apply constructor" should "have been created" in {
      val echo1 = Echo(greetings = "Yo", times = 2)
