@@ -14,16 +14,16 @@ object Type {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     
-    class Accumulator(val module: Buffer[Tree], val states: Buffer[(TermName, TypeName)]) {
+    class Accumulator(val itf: Buffer[Tree], val module: Buffer[Tree], val fields: Buffer[(TermName, TypeName)]) {
       def this() {
-        this(Buffer[Tree](), Buffer[(TermName, TypeName)]())
+        this(Buffer[Tree](), Buffer[Tree](), Buffer[(TermName, TypeName)]())
       }
     }
 
     val inputs = annottees.map(_.tree).toList
 
-    val (interface, module) = inputs match {
-      case (interface @ClassDef(mods, typeName, tparams, template)) :: rest =>
+    val block = inputs match {
+      case (itf @ClassDef(mods, typeName, tparams, template)) :: rest =>
         val termName = typeName.toTermName;
 
         val proxy = (trees: Accumulator, m: DefDef) => (mods: Modifiers, name: TermName, tparams: List[TypeDef], vparamss: List[List[ValDef]], tpt: Tree) => {
@@ -76,44 +76,50 @@ object Type {
               $invokeMethodOnInst
             """)
             trees.module += defdef 
+          } else {
+            trees.itf += m
           }
         }
         
         import scala.reflect.runtime.universe.Flag._
-        val module = template match {
+        template match {
           case Template(parents, self, body) =>
             val trees = body.foldLeft(new Accumulator()) ((trees, t1) => {
               t1 match {
                 case p @DefDef(Modifiers(DEFERRED, typeNames.EMPTY, List(Apply(Select(New(Ident(TypeName("state"))), termNames.CONSTRUCTOR), List()))), valName, List(), List(), Ident(valType), EmptyTree) =>
-                  trees.states += ((valName, valType.asInstanceOf[TypeName]))
+                  trees.fields += ((valName, valType.asInstanceOf[TypeName]))
+                  trees.itf += p
                 case m @DefDef(mods, name, tparams, vparamss, tpt, rhs) if mods.hasFlag(Flag.DEFERRED) =>
                   proxy(trees, m)(mods, name, tparams, vparamss, tpt)
                 case m @DefDef(mods, name, tparams, vparamss, tpt, Ident(TermName(bodyLiteral))) =>
                   proxy(trees, m)(mods, name, tparams, vparamss, tpt)
                 case dd @DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
                   c.warning(c.enclosingPosition, "what " + showRaw(rhs))
+                  trees.itf += dd
                 case na => 
                   c.warning(c.enclosingPosition, "NA " + showRaw(na))
+                  trees.itf += na
               }
               trees
             })
             
-            val paramTypes = trees.states.map(p => TypeApply(Ident(TermName("classOf")), List(Ident(p._2))))
+            val paramTypes = trees.fields.map(p => TypeApply(Ident(TermName("classOf")), List(Ident(p._2))))
             val apply = DefDef(
               Modifiers(),
               TermName("apply"), 
               List(), 
-              List(trees.states.map( p => ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), EmptyTree)).toList),
+              List(trees.fields.map( p => ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), EmptyTree)).toList),
               Ident(typeName), 
               q"""
                 val cls = Thread.currentThread().getContextClassLoader.loadClass(${implName(c)(typeName, false)})
                 val ctor = cls.getDeclaredConstructor(..$paramTypes)
                 ctor.setAccessible(true);
-                ctor.newInstance(..${trees.states.map(_._1)}).asInstanceOf[$typeName]
+                ctor.newInstance(..${trees.fields.map(_._1)}).asInstanceOf[$typeName]
               """
             )
 
-            q"""
+            val itfx = ClassDef(mods, typeName, tparams, Template(List(Select(Ident("scala"), TypeName("AnyRef"))), noSelfType, trees.itf.toList))
+            val module = q"""
               object $termName {
                 trait Static {
                   def echoStatic(msg: String): String
@@ -125,23 +131,22 @@ object Type {
                 
                 $apply
             
-                def dumpAst = ${showRaw(interface)}
+                def dumpAst = ${showRaw(itf)}
               }
             """
-          case _ => null
+                
+            q"""
+              $itfx
+              
+              $module
+            """            
+          case _ => itf
         }
         // c.warning(c.enclosingPosition, "module " + show(module))
 
-        (interface, module)
-      case List(x) => (x, null)
+      case List(x) => x
     }
 
-    val block = q"""
-      $interface
-      
-      $module
-    """
-      
     c.Expr[Any](block)
   }
   
