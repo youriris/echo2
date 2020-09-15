@@ -2,7 +2,15 @@ package echo
 
 @Type
 trait Echo {
-  @static def echo(msg: String): String
+  @state def greetings: String
 
-  @static def echoTo(msg: String)(target: String): String
+  @state def times: Integer
+  
+  def echo(msg: String): String 
+
+  def echoTo(msg: String)(target: String): String
+
+  @static def echoStatic(msg: String): String
+
+  @static def echoStaticTo(msg: String)(target: String): String
 }

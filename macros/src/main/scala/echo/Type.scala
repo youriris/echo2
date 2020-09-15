@@ -27,8 +27,39 @@ object Type {
         val termName = typeName.toTermName;
 
         val proxy = (trees: Accumulator, m: DefDef) => (mods: Modifiers, name: TermName, tparams: List[TypeDef], vparamss: List[List[ValDef]], tpt: Tree) => {
-          if(show(mods).contains("new static()")) {
-            val m2 = vparamss.foldLeft(null: Tree)((invoke, params) => {
+          if(mods.annotations.exists(_ match {
+            case Apply(Select(New(Ident(TypeName("static"))), termNames.CONSTRUCTOR), List()) => true
+            case _ => false
+          })) {
+            val assignInst = ValDef(
+              Modifiers(), 
+              TermName("inst"), 
+              TypeTree(), 
+              TypeApply(
+                Select(
+                  Apply(
+                    Select(
+                      Apply(
+                        Select(
+                          Select(
+                            Apply(Select(Ident(TermName("Thread")), TermName("currentThread")), List()), 
+                            TermName("getContextClassLoader")
+                          ), 
+                          TermName("loadClass")
+                        ), 
+                        List(Literal(Constant(implName(c)(typeName, true))))
+                      ), 
+                      TermName("newInstance")
+                    ), 
+                    List()
+                  ), 
+                  TermName("asInstanceOf")
+                ), 
+                List(Select(Ident(termName), TypeName("Static")))
+              )
+            )
+
+            val invokeMethodOnInst = vparamss.foldLeft(null: Tree)((invoke, params) => {
               val ps = params.map {
                 case ValDef(_, n, _, _) => Ident(n)
               }
@@ -38,11 +69,11 @@ object Type {
                 case _ => Apply(Select(Ident(TermName("inst")), name.toTermName), ps)
               }
             })
-  
+
             val defdef = DefDef(Modifiers(), name, tparams, vparamss, tpt, q"""
-              val inst = Thread.currentThread().getContextClassLoader.loadClass(${implName(c)(typeName)}).newInstance().asInstanceOf[$typeName]
+              $assignInst
   
-              $m2
+              $invokeMethodOnInst
             """)
             trees.module += defdef 
           }
@@ -67,28 +98,31 @@ object Type {
               trees
             })
             
-            val applyParams = trees.states.map { p =>
-              ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), EmptyTree)
-            }.toList
-            val params = trees.states.map(_._1)
+            val paramTypes = trees.states.map(p => TypeApply(Ident(TermName("classOf")), List(Ident(p._2))))
             val apply = DefDef(
               Modifiers(),
               TermName("apply"), 
               List(), 
-              List(applyParams),
+              List(trees.states.map( p => ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), EmptyTree)).toList),
               Ident(typeName), 
               q"""
-                    val cls = Thread.currentThread().getContextClassLoader.loadClass(${implName(c)(typeName)})
-                    val ctor = cls.getDeclaredConstructor(classOf[String])
-	                  ctor.setAccessible(true);
-	                  ctor.newInstance(..$params).asInstanceOf[$typeName]
+                val cls = Thread.currentThread().getContextClassLoader.loadClass(${implName(c)(typeName, false)})
+                val ctor = cls.getDeclaredConstructor(..$paramTypes)
+                ctor.setAccessible(true);
+                ctor.newInstance(..${trees.states.map(_._1)}).asInstanceOf[$typeName]
               """
             )
 
             q"""
               object $termName {
+                trait Static {
+                  def echoStatic(msg: String): String
+                
+                  def echoStaticTo(msg: String)(target: String): String
+                }
+
                 ..${trees.module}
-            
+                
                 $apply
             
                 def dumpAst = ${showRaw(interface)}
@@ -111,12 +145,12 @@ object Type {
     c.Expr[Any](block)
   }
   
-  private def implName(c: whitebox.Context)(typeName: c.universe.TypeName) = {
+  private def implName(c: whitebox.Context)(typeName: c.universe.TypeName, isStatic: Boolean) = {
     import c.universe._
     
     val freshName = c.fresh(newTypeName("Probe$"))      
     c.typeCheck(q""" {class $freshName; ()} """) match {        
-      case Block(List(t), r) => t.symbol.owner.name + "." + TermName(typeName + "Impl")
+      case Block(List(t), r) => t.symbol.owner.name + "." + TermName(typeName + (if(isStatic) "Static" else "Impl"))
     }
   }
 }
