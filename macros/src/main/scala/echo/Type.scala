@@ -86,7 +86,7 @@ object Type {
           case Template(parents, self, body) =>
             val trees = body.foldLeft(new Accumulator()) ((trees, t1) => {
               t1 match {
-                case p @DefDef(Modifiers(DEFERRED, typeNames.EMPTY, List(Apply(Select(New(Ident(TypeName("state"))), termNames.CONSTRUCTOR), List()))), valName, List(), List(), Ident(valType), EmptyTree) =>
+                case p @DefDef(Modifiers(DEFERRED, typeNames.EMPTY, List(Apply(Select(New(Ident(TypeName("field"))), termNames.CONSTRUCTOR), List()))), valName, List(), List(), Ident(valType), EmptyTree) =>
                   trees.fields += ((valName, valType.asInstanceOf[TypeName]))
                   trees.itf += p
                 case m @DefDef(mods, name, tparams, vparamss, tpt, rhs) if mods.hasFlag(Flag.DEFERRED) =>
