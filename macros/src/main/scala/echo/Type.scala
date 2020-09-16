@@ -14,9 +14,9 @@ object Type {
   def impl(c: whitebox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     
-    class Accumulator(val itf: Buffer[Tree], val module: Buffer[Tree], val fields: Buffer[(TermName, TypeName)], val statics: Buffer[Tree]) {
+    class Accumulator(val itf: Buffer[Tree], val module: Buffer[Tree], val fields: Buffer[(TermName, TypeName, Tree)], val statics: Buffer[Tree]) {
       def this() {
-        this(Buffer[Tree](), Buffer[Tree](), Buffer[(TermName, TypeName)](), Buffer[Tree]())
+        this(Buffer[Tree](), Buffer[Tree](), Buffer[(TermName, TypeName, Tree)](), Buffer[Tree]())
       }
     }
 
@@ -89,24 +89,25 @@ object Type {
             val trees = body.foldLeft(new Accumulator()) ((trees, t1) => {
               t1 match {
                 case p @DefDef(
-                          Modifiers(DEFERRED, typeNames.EMPTY, List(Apply(Select(New(Ident(TypeName("field"))), termNames.CONSTRUCTOR), List()))), 
+                          Modifiers(flags, typeNames.EMPTY, annotations), 
                           valName, 
                           List(), 
                           List(), 
                           Ident(valType), 
-                          EmptyTree
+                          rval
                         ) =>
-                  trees.fields += ((valName, valType.asInstanceOf[TypeName]))
-                  trees.itf += p
+                  if(annotations.exists {_ match {
+                    case Apply(Select(New(Ident(TypeName("field"))), termNames.CONSTRUCTOR), List()) => true
+                  }}) {
+                    trees.fields += ((valName, valType.asInstanceOf[TypeName], rval))
+                    trees.itf += p
+                  }
                 case m @DefDef(mods, name, tparams, vparamss, tpt, rhs) if mods.hasFlag(Flag.DEFERRED) =>
                   proxy(trees, m)(mods, name, tparams, vparamss, tpt)
                 case m @DefDef(mods, name, tparams, vparamss, tpt, Ident(TermName(bodyLiteral))) =>
                   proxy(trees, m)(mods, name, tparams, vparamss, tpt)
-                case dd @DefDef(mods, name, tparams, vparamss, tpt, rhs) =>
-                  c.warning(c.enclosingPosition, "what " + showRaw(rhs))
-                  trees.itf += dd
                 case na => 
-                  c.warning(c.enclosingPosition, "NA " + showRaw(na))
+                  // c.warning(c.enclosingPosition, "NA " + showRaw(na))
                   trees.itf += na
               }
               trees
@@ -117,7 +118,7 @@ object Type {
               Modifiers(),
               TermName("apply"), 
               List(), 
-              List(trees.fields.map( p => ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), EmptyTree)).toList),
+              List(trees.fields.map( p => ValDef(Modifiers(Flag.PARAM), p._1, Ident(p._2), p._3)).toList),
               Ident(typeName), 
               q"""
                 val cls = Thread.currentThread().getContextClassLoader.loadClass(${implName(c)(typeName, false)})

@@ -20,6 +20,6 @@ class EchoTest extends AnyFlatSpec {
   }
 
   "dumpAst()" should "dump AST tree for the type" in {
-     Echo.dumpAst should startWith("""ClassDef(Modifiers(ABSTRACT | INTERFACE | DEFAULTPARAM/TRAIT), TypeName("Echo")""")
+     Echo.dumpAst should startWith("""ClassDef(Modifiers(ABSTRACT | DEFAULTPARAM/TRAIT), TypeName("Echo")""")
   }
 }

@@ -3,17 +3,17 @@ package echo
 @Type
 trait Echo {
   // immutable member value delegation -> EchoImpl.greetings 
-  @field def greetings: String
+  @field @notnull def greetings: String
 
-  // immutable member value delegation -> EchoImpl.times
-  @field def times: Integer
+  // immutable member delegation with default value -> EchoImpl.times
+  @field def times: Integer = 1
   
   // instance call delegation -> EchoImpl.echo(msg)
-  def echo(msg: String): String 
+  @notnull def echo(@notnull msg: String): String 
 
   // multiple parameter group support -> EchoImpl.echoTo(msg)(target)
-  def echoTo(msg: String)(target: String): String
+  @notnull def echoTo(@notnull msg: String)(target: String = "Tom"): String
 
   // static call delegation -> EchoStatic.echoStatic(msg)
-  @static def echoStatic(msg: String): String
+  @static @notnull def echoStatic(@notnull msg: String): String
 }
